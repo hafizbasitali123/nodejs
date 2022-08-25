@@ -6,7 +6,7 @@ var session = require('express-session');
 // var connection  = require('./lib/db');
 var indexRouting = require('./routes/routing');
 var app = express();
-
+ 
 // var loginRouter = require('./routes/login');
 
 // view engine setup
