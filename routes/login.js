@@ -2,9 +2,11 @@ const  app = require("express")
 const bcrypt = require("bcrypt");
 const router = app.Router();
 var dbConn  = require('../lib/db');
+var encryption = require('../helpers/encyption'); 
 
-let hashedPass = '';
 router.get('/', function(req, res) {    
+    
+    if(req.session.userId) res.redirect('/users');
     // render to add.ejs
     dbConn.query('SELECT * FROM login ORDER BY id desc',function(err,rows)     {
         if(err) {
@@ -33,12 +35,10 @@ router.get('/test', (req, res) => {
 })
 
     router.post('/login-user',  function(req, res) {    
-        console.log(req.body, "body")
     
         let email = req.body.email;
         let  password= req.body.password;
-        // hashedPass = await incry.hash(req.body.password,10)
-        // console.log(req.body.password+'\n'+hashedPass);
+        
         let errors = false;
     
         if(email.length === 0 || password.length === 0 ) {
@@ -67,7 +67,6 @@ router.get('/test', (req, res) => {
             // insert query
             dbConn.query(`SELECT * FROM login where email = '${email}'` ,function(err,rows) {
                  if(err) throw err;
-                 console.log('rows here: ', rows);
                 if (rows.length === 0) {
                     console.log('error', err)
                     
@@ -80,11 +79,12 @@ router.get('/test', (req, res) => {
                     })
                 } else { 
                     
-                    bcrypt.compare(rows[0].password, password, function (req, err, ismatch){
+                    bcrypt.compare(rows[0].password, password, function (req2, err, ismatch){
                         if(ismatch){
+                            error:req.flash('error', req.flash('error', 'Invalid Credentials'))
                               res.redirect('/login');
                         } else {
-//                             session.id = rows[0].id;
+                            req.session.userId = rows[0].id;
                             res.redirect('/users')
                         }
                     })               

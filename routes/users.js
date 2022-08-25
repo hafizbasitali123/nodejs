@@ -1,34 +1,46 @@
 var express = require('express');
 var router = express.Router();
-var dbConn  = require('../lib/db');
-var encryption = require('../helpers/encyption'); 
- 
+var dbConn = require('../lib/db');
+var encryption = require('../helpers/encyption');
+
 // display user page
-router.get('/', function(req, res, next) {      
-    dbConn.query('SELECT * FROM users ORDER BY id desc',function(err,rows)     {
-        if(err) {
-            req.flash('error', err);
-            // render to views/users/index.ejs
-            res.render('users',{data:'',enc:encryption});   
-        } else {
-            // render to views/users/index.ejs
-            res.render('users',{data:rows,enc:encryption});
-        }
-    });
+router.get('/', function (req, res, next) {
+
+    if (req.session.userId) {
+        dbConn.query('SELECT * FROM users ORDER BY id desc', function (err, rows) {
+            if (err) {
+                req.flash('error', err);
+                // render to views/users/index.ejs
+                res.render('users', { data: '', enc: encryption });
+            } else {
+                // render to views/users/index.ejs
+                res.render('users', { data: rows, enc: encryption });
+            }
+        });
+    } else {
+        res.redirect('/login')
+    }
+});
+
+//logout
+router.get('/logout', function (req, res) {
+    req.session.userId = null;
+    req.flash('success', 'Logout successfully');
+    res.redirect('/login');
 });
 
 // display add user page
-router.get('/add', function(req, res, next) {    
+router.get('/add', function (req, res, next) {
     // render to add.ejs
     res.render('users/add', {
         name: '',
         email: '',
-        position:''
+        position: ''
     })
 })
 
 // add a new user
-router.post('/add', function(req, res) {    
+router.post('/add', function (req, res) {
     console.log(req.body.email)
 
     let name = req.body.name;
@@ -36,7 +48,7 @@ router.post('/add', function(req, res) {
     let position = req.body.position;
     let errors = false;
 
-    if(name.length === 0 || email.length === 0 || position === 0) {
+    if (name.length === 0 || email.length === 0 || position === 0) {
         errors = true;
 
         // set flash message
@@ -45,32 +57,32 @@ router.post('/add', function(req, res) {
         res.render('users/add', {
             name: name,
             email: email,
-            position:position
+            position: position
         })
     }
 
     // if no error
-    if(!errors) {
+    if (!errors) {
 
         var form_data = {
             name: name,
             email: email,
-            position:position
+            position: position
         }
-        
+
         // insert query
-        dbConn.query('INSERT INTO users SET ?', form_data, function(err, result) {
+        dbConn.query('INSERT INTO users SET ?', form_data, function (err, result) {
             //if(err) throw err
             if (err) {
                 req.flash('error', err)
-                 
+
                 // render to add.ejs
                 res.render('users/add', {
                     name: form_data.name,
                     email: form_data.email,
-                    position:form_data.position
+                    position: form_data.position
                 })
-            } else {                
+            } else {
                 req.flash('success', 'User successfully added');
                 res.redirect('/users');
             }
@@ -79,13 +91,13 @@ router.post('/add', function(req, res) {
 })
 
 // display edit user page
-router.get('/edit/(:id)', function(req, res, next) {
+router.get('/edit/(:id)', function (req, res, next) {
 
     let id = encryption.decrypt(req.params.id.toString());
-   
-    dbConn.query('SELECT * FROM users WHERE id = ' + id, function(err, rows, fields) {
-        if(err) throw err
-         
+
+    dbConn.query('SELECT * FROM users WHERE id = ' + id, function (err, rows, fields) {
+        if (err) throw err
+
         // if user not found
         if (rows.length <= 0) {
             req.flash('error', 'User not found with id = ' + id)
@@ -95,7 +107,7 @@ router.get('/edit/(:id)', function(req, res, next) {
         else {
             // render to edit.ejs
             res.render('users/edit', {
-                title: 'Edit User', 
+                title: 'Edit User',
                 id: encryption.encrypt(rows[0].id.toString()),
                 name: rows[0].name,
                 email: rows[0].email,
@@ -106,7 +118,7 @@ router.get('/edit/(:id)', function(req, res, next) {
 })
 
 // update user data
-router.post('/update/:id', function(req, res, next) {
+router.post('/update/:id', function (req, res, next) {
 
     let id = encryption.decrypt(req.params.id.toString());
     let name = req.body.name;
@@ -114,9 +126,9 @@ router.post('/update/:id', function(req, res, next) {
     let position = req.body.position;
     let errors = false;
 
-    if(name.length === 0 || email.length === 0 || position.length === 0) {
+    if (name.length === 0 || email.length === 0 || position.length === 0) {
         errors = true;
-        
+
         // set flash message
         req.flash('error', "Please enter name and email and position");
         // render to add.ejs with flash message
@@ -124,20 +136,20 @@ router.post('/update/:id', function(req, res, next) {
             id: encryption.encrypt(req.params.id),
             name: name,
             email: email,
-            position:position
+            position: position
         })
     }
 
     // if no error
-    if( !errors ) {   
- 
+    if (!errors) {
+
         var form_data = {
             name: name,
             email: email,
-            position:position
+            position: position
         }
         // update query
-        dbConn.query('UPDATE users SET ? WHERE id = ' + id, form_data, function(err, result) {
+        dbConn.query('UPDATE users SET ? WHERE id = ' + id, form_data, function (err, result) {
             //if(err) throw err
             if (err) {
                 // set flash message
@@ -156,13 +168,13 @@ router.post('/update/:id', function(req, res, next) {
         })
     }
 })
-   
+
 // delete user
-router.get('/delete/(:id)', function(req, res, next) {
+router.get('/delete/(:id)', function (req, res, next) {
 
     let id = encryption.decrypt(req.params.id.toString());
-     
-    dbConn.query('DELETE FROM users WHERE id = ' + id, function(err, result) {
+
+    dbConn.query('DELETE FROM users WHERE id = ' + id, function (err, result) {
         //if(err) throw err
         if (err) {
             // set flash message
